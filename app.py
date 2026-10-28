@@ -129,6 +129,61 @@ def add_order():
         flash("Enter a valid customer and quantity.")
     return redirect(url_for("index"))
 
+# ── Database Dashboard ────────────────────────────────────────────────────────
+
+def _get_tables(con):
+    return [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()]
+
+@app.route("/database")
+def db_dashboard():
+    with connect() as con:
+        tables = _get_tables(con)
+        stats = {t: con.execute(f"SELECT COUNT(*) FROM [{t}]").fetchone()[0] for t in tables}
+        schema = {t: con.execute(f"PRAGMA table_info([{t}])").fetchall() for t in tables}
+    return render_template("database.html", tables=tables, stats=stats, schema=schema,
+                           active_table=None, rows=None, columns=None, query="", query_result=None, error=None)
+
+@app.route("/database/table/<table_name>")
+def db_table(table_name):
+    with connect() as con:
+        tables = _get_tables(con)
+        if table_name not in tables:
+            flash("Table not found.")
+            return redirect(url_for("db_dashboard"))
+        stats  = {t: con.execute(f"SELECT COUNT(*) FROM [{t}]").fetchone()[0] for t in tables}
+        schema = {t: con.execute(f"PRAGMA table_info([{t}])").fetchall() for t in tables}
+        cur    = con.execute(f"SELECT * FROM [{table_name}] LIMIT 200")
+        columns = [d[0] for d in cur.description]
+        rows    = cur.fetchall()
+    return render_template("database.html", tables=tables, stats=stats, schema=schema,
+                           active_table=table_name, rows=rows, columns=columns,
+                           query="", query_result=None, error=None)
+
+@app.route("/database/query", methods=["POST"])
+def db_query():
+    sql = request.form.get("sql", "").strip()
+    with connect() as con:
+        tables = _get_tables(con)
+        stats  = {t: con.execute(f"SELECT COUNT(*) FROM [{t}]").fetchone()[0] for t in tables}
+        schema = {t: con.execute(f"PRAGMA table_info([{t}])").fetchall() for t in tables}
+    columns, rows, error = None, None, None
+    if sql:
+        try:
+            with connect() as con:
+                cur = con.execute(sql)
+                if cur.description:
+                    columns = [d[0] for d in cur.description]
+                    rows    = cur.fetchall()
+                else:
+                    flash(f"Query executed. Rows affected: {cur.rowcount}")
+        except Exception as e:
+            error = str(e)
+    return render_template("database.html", tables=tables, stats=stats, schema=schema,
+                           active_table=None, rows=rows, columns=columns,
+                           query=sql, query_result=rows, error=error)
+
+# ──────────────────────────────────────────────────────────────────────────────
+
 @app.route("/orders/<int:order_id>/status", methods=["POST"])
 def update_order_status(order_id):
     status = request.form.get("status", "Placed")

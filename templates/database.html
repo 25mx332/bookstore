@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DB Dashboard · Bookstore</title>
+<style>
+  :root {
+    --green:    #58cc02; --green-dk: #46a302;
+    --orange:   #ff9600; --orange-dk:#e08000;
+    --red:      #ff4b4b; --red-dk:   #d93025;
+    --blue:     #1cb0f6; --blue-dk:  #0e8fc0;
+    --bg:       #f0f4f8; --card:     #ffffff;
+    --border:   #e2e8f0; --text:     #2d3748; --muted: #718096;
+    --sidebar-w: 230px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.6 "Segoe UI", Arial, sans-serif; color: var(--text); background: var(--bg); display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ── Top bar ── */
+  .topbar {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff; padding: 0 24px; height: 54px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px #0004; position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; }
+  .topbar-brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); display: inline-block; }
+  .topbar-links { display: flex; gap: 16px; }
+  .topbar-links a { color: #a0aec0; text-decoration: none; font-size: 13px; font-weight: 600; transition: color .15s; }
+  .topbar-links a:hover { color: #fff; }
+  .topbar-links a.active { color: var(--green); }
+
+  /* ── Layout ── */
+  .layout { display: flex; flex: 1; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w); background: #1a1a2e; color: #cbd5e0;
+    padding: 20px 0; flex-shrink: 0; min-height: calc(100vh - 54px);
+  }
+  .sidebar-section { padding: 8px 18px 4px; font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px; color: #4a5568; }
+  .sidebar a {
+    display: flex; align-items: center; gap: 9px; padding: 9px 18px;
+    color: #a0aec0; text-decoration: none; font-size: 13px; font-weight: 600;
+    border-left: 3px solid transparent; transition: all .15s;
+  }
+  .sidebar a:hover { background: #ffffff0d; color: #fff; }
+  .sidebar a.active { background: #ffffff12; color: var(--green); border-left-color: var(--green); }
+  .sidebar .badge-count {
+    margin-left: auto; background: #2d3748; color: #a0aec0;
+    font-size: 11px; padding: 1px 7px; border-radius: 10px;
+  }
+  .sidebar a.active .badge-count { background: #1a3a0a; color: var(--green); }
+
+  /* ── Main content ── */
+  .content { flex: 1; padding: 24px; overflow-x: auto; }
+
+  /* ── Cards ── */
+  .card { background: var(--card); border-radius: 14px; border: 1.5px solid var(--border); box-shadow: 0 1px 6px #0001; margin-bottom: 20px; }
+  .card-header { padding: 16px 20px; border-bottom: 1.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-header h2 { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 18px 20px; }
+
+  /* ── Stat grid ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--card); border-radius: 12px; border: 1.5px solid var(--border);
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .stat-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  .stat-card .value { font-size: 28px; font-weight: 800; color: var(--green); }
+  .stat-card .sub   { font-size: 12px; color: var(--muted); }
+
+  /* ── Table ── */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: #f7fafc; color: var(--muted); font-weight: 700; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .5px; padding: 10px 12px; text-align: left;
+    border-bottom: 2px solid var(--border); white-space: nowrap; }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #f0fff4; }
+  .null-val { color: #bbb; font-style: italic; font-size: 12px; }
+  .pk-badge { background: #ebf8ff; color: #2b6cb0; font-size: 11px; font-weight: 700;
+    padding: 1px 6px; border-radius: 6px; margin-left: 4px; }
+  .type-badge { background: #f0fff4; color: var(--green-dk); font-size: 11px; font-weight: 700;
+    padding: 1px 7px; border-radius: 6px; }
+  .notnull-dot { color: var(--red); font-weight: 900; margin-left: 4px; title: "NOT NULL"; }
+
+  /* ── SQL Editor ── */
+  .sql-editor {
+    width: 100%; min-height: 110px; font: 13px/1.6 "Consolas", "Courier New", monospace;
+    background: #1a1a2e; color: #a8ff78; border: 2px solid #2d3748; border-radius: 10px;
+    padding: 14px; resize: vertical; outline: none; transition: border-color .15s;
+  }
+  .sql-editor:focus { border-color: var(--green); }
+  .btn { padding: 8px 18px; border: none; border-radius: 9px; font-size: 13px; font-weight: 800;
+    cursor: pointer; transition: filter .15s, transform .1s; }
+  .btn:active { transform: scale(.97); }
+  .btn-green  { background: var(--green);  color: #fff; box-shadow: 0 3px 0 var(--green-dk); }
+  .btn-orange { background: var(--orange); color: #fff; box-shadow: 0 3px 0 var(--orange-dk); }
+  .btn-ghost  { background: #edf2f7; color: var(--text); box-shadow: 0 3px 0 #cbd5e0; }
+  .btn-row    { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+
+  /* ── Flash / Error ── */
+  .flash { padding: 10px 16px; border-radius: 9px; font-size: 13px; font-weight: 700;
+    background: #f0fff4; border-left: 4px solid var(--green); color: #276749; margin-bottom: 16px; }
+  .error { padding: 10px 16px; border-radius: 9px; font-size: 13px; font-weight: 700;
+    background: #fff5f5; border-left: 4px solid var(--red); color: #c53030; margin-bottom: 16px; }
+
+  /* ── Empty ── */
+  .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 13px; }
+
+  /* ── Schema pill row ── */
+  .schema-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .schema-pill {
+    background: #f7fafc; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .schema-pill .col-name { font-weight: 700; }
+
+  /* ── Quick queries ── */
+  .quick-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .quick-btn {
+    background: #1a1a2e; color: #68d391; border: 1px solid #2d3748;
+    border-radius: 6px; padding: 4px 10px; font: 12px "Consolas", monospace;
+    cursor: pointer; transition: background .15s;
+  }
+  .quick-btn:hover { background: #2d3748; }
+
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .content { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="dot"></span> Bookstore DB Dashboard
+  </div>
+  <div class="topbar-links">
+    <a href="{{ url_for('index') }}">← Back to Store</a>
+    <a href="{{ url_for('db_dashboard') }}" class="active">Database</a>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-section">Tables</div>
+    <a href="{{ url_for('db_dashboard') }}" class="{{ 'active' if not active_table and not query_result else '' }}">
+      🏠 Overview
+    </a>
+    {% for t in tables %}
+    <a href="{{ url_for('db_table', table_name=t) }}" class="{{ 'active' if active_table == t else '' }}">
+      🗄 {{ t }}
+      <span class="badge-count">{{ stats[t] }}</span>
+    </a>
+    {% endfor %}
+    <div class="sidebar-section" style="margin-top:16px">Tools</div>
+    <a href="#sql-runner" class="{{ 'active' if query_result is not none and not active_table else '' }}">
+      ⚡ SQL Runner
+    </a>
+  </nav>
+
+  <!-- Main -->
+  <div class="content">
+
+    {% with messages = get_flashed_messages() %}
+      {% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+
+    {% if error %}<div class="error">⚠ {{ error }}</div>{% endif %}
+
+    <!-- ── Overview stats ── -->
+    {% if not active_table %}
+    <div class="stat-grid">
+      {% for t in tables %}
+      <a href="{{ url_for('db_table', table_name=t) }}" style="text-decoration:none">
+        <div class="stat-card">
+          <div class="label">{{ t }}</div>
+          <div class="value">{{ stats[t] }}</div>
+          <div class="sub">rows</div>
+        </div>
+      </a>
+      {% endfor %}
+      <div class="stat-card">
+        <div class="label">Tables</div>
+        <div class="value">{{ tables | length }}</div>
+        <div class="sub">total</div>
+      </div>
+    </div>
+
+    <!-- Schema overview -->
+    {% for t in tables %}
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <h2>🗄 {{ t }} <span style="color:var(--muted);font-weight:400;font-size:13px">— schema</span></h2>
+        <a href="{{ url_for('db_table', table_name=t) }}" class="btn btn-ghost" style="font-size:12px;padding:5px 12px">Browse rows →</a>
+      </div>
+      <div class="card-body">
+        <div class="schema-row">
+          {% for col in schema[t] %}
+          <div class="schema-pill">
+            <span class="col-name">{{ col[1] }}</span>
+            <span class="type-badge">{{ col[2] }}</span>
+            {% if col[5] %}<span class="pk-badge">PK</span>{% endif %}
+            {% if col[3] %}<span class="notnull-dot" title="NOT NULL">●</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- ── Table browser ── -->
+    {% if active_table %}
+    <div class="card">
+      <div class="card-header">
+        <h2>🗄 {{ active_table }}
+          <span style="color:var(--muted);font-weight:400;font-size:13px">— {{ stats[active_table] }} rows</span>
+        </h2>
+      </div>
+      <!-- Schema pills -->
+      <div class="card-body" style="padding-bottom:8px">
+        <div class="schema-row">
+          {% for col in schema[active_table] %}
+          <div class="schema-pill">
+            <span class="col-name">{{ col[1] }}</span>
+            <span class="type-badge">{{ col[2] }}</span>
+            {% if col[5] %}<span class="pk-badge">PK</span>{% endif %}
+            {% if col[3] %}<span class="notnull-dot" title="NOT NULL">●</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <!-- Rows -->
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              {% for cell in row %}
+              <td>{% if cell is none %}<span class="null-val">NULL</span>{% else %}{{ cell }}{% endif %}</td>
+              {% endfor %}
+            </tr>
+            {% else %}
+            <tr><td colspan="{{ columns|length }}" class="empty">No rows found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if rows and rows|length == 200 %}
+      <div style="padding:10px 20px;font-size:12px;color:var(--muted)">⚠ Showing first 200 rows.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ── SQL Runner ── -->
+    <div class="card" id="sql-runner">
+      <div class="card-header">
+        <h2>⚡ SQL Runner</h2>
+      </div>
+      <div class="card-body">
+        <!-- Quick query buttons -->
+        <div class="quick-btns">
+          {% for t in tables %}
+          <button class="quick-btn" onclick="setQuery('SELECT * FROM [{{ t }}] LIMIT 50')">SELECT {{ t }}</button>
+          <button class="quick-btn" onclick="setQuery('SELECT COUNT(*) FROM [{{ t }}]')">COUNT {{ t }}</button>
+          {% endfor %}
+        </div>
+        <form method="post" action="{{ url_for('db_query') }}">
+          <textarea class="sql-editor" name="sql" id="sql-input" spellcheck="false"
+            placeholder="SELECT * FROM books LIMIT 10;">{{ query }}</textarea>
+          <div class="btn-row">
+            <button type="submit" class="btn btn-green">▶ Run Query</button>
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('sql-input').value=''">Clear</button>
+          </div>
+        </form>
+
+        <!-- Query results -->
+        {% if query_result is not none %}
+        <div style="margin-top:20px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+            {{ rows|length if rows else 0 }} row(s) returned
+          </div>
+          {% if columns %}
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+              <tbody>
+                {% for row in rows %}
+                <tr>{% for cell in row %}<td>{% if cell is none %}<span class="null-val">NULL</span>{% else %}{{ cell }}{% endif %}</td>{% endfor %}</tr>
+                {% else %}
+                <tr><td colspan="{{ columns|length }}" class="empty">No rows returned.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /layout -->
+
+<script>
+  function setQuery(sql) {
+    document.getElementById('sql-input').value = sql;
+    document.getElementById('sql-runner').scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
