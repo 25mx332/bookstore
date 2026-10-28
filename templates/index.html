@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📚 Online Bookstore</title>
+<style>
+  :root {
+    --green:    #58cc02;
+    --green-dk: #46a302;
+    --orange:   #ff9600;
+    --orange-dk:#e08000;
+    --red:      #ff4b4b;
+    --red-dk:   #d93025;
+    --bg:       #f7f7f7;
+    --card:     #ffffff;
+    --border:   #e5e5e5;
+    --text:     #3c3c3c;
+    --muted:    #777;
+    --header-h: #38c700;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 "Nunito", "Segoe UI", Arial, sans-serif; }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, var(--green) 0%, var(--header-h) 100%);
+    color: #fff; padding: 20px 32px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 3px 10px #0002;
+  }
+  header .logo { font-size: 38px; }
+  header h1 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
+  header p  { font-size: 13px; opacity: .85; }
+
+  /* ── Layout ── */
+  main { max-width: 1120px; margin: 28px auto; padding: 0 18px; display: grid; gap: 22px; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card); border-radius: 16px; padding: 22px 24px;
+    box-shadow: 0 2px 12px #0001; border: 1.5px solid var(--border);
+  }
+  .card-title {
+    font-size: 17px; font-weight: 800; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .icon { font-size: 20px; }
+
+  /* ── Flash ── */
+  .flash {
+    padding: 11px 16px; border-radius: 10px; font-size: 14px; font-weight: 700;
+    background: #e8f9d9; border-left: 4px solid var(--green); color: #2a6000;
+  }
+
+  /* ── Forms ── */
+  form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  input, select {
+    padding: 9px 12px; border: 2px solid var(--border); border-radius: 10px;
+    font-size: 14px; background: #fafafa; color: var(--text); outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus { border-color: var(--green); background: #fff; }
+  input { flex: 1; min-width: 110px; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 9px 18px; border: none; border-radius: 10px; font-size: 14px;
+    font-weight: 800; cursor: pointer; transition: filter .15s, transform .1s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn:hover  { filter: brightness(1.08); }
+  .btn-green  { background: var(--green);  color: #fff; box-shadow: 0 3px 0 var(--green-dk); }
+  .btn-orange { background: var(--orange); color: #fff; box-shadow: 0 3px 0 var(--orange-dk); }
+  .btn-red    { background: var(--red);    color: #fff; box-shadow: 0 3px 0 var(--red-dk); }
+  .btn-ghost  { background: #f0f0f0; color: var(--text); box-shadow: 0 3px 0 #ccc; }
+
+  /* ── Table ── */
+  .tbl-wrap { overflow-x: auto; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: #f0fce8; color: var(--green-dk); font-weight: 800; padding: 10px 12px; text-align: left; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafff5; }
+  .book-title { font-weight: 700; }
+  .book-author { font-size: 12px; color: var(--muted); }
+
+  /* ── Status badges ── */
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 800; letter-spacing: .3px;
+  }
+  .badge-placed     { background: #fff3cd; color: #856404; }
+  .badge-processing { background: #cfe2ff; color: #084298; }
+  .badge-shipped    { background: #d1ecf1; color: #0c5460; }
+  .badge-completed  { background: #d4edda; color: #155724; }
+  .badge-cancelled  { background: #f8d7da; color: #721c24; }
+
+  /* ── Inline edit panel ── */
+  details summary {
+    cursor: pointer; color: var(--orange-dk); font-weight: 700; font-size: 13px;
+    list-style: none; padding: 4px 0;
+  }
+  details summary::before { content: "✏️ "; }
+  details[open] summary::before { content: "🔼 "; }
+  .edit-form {
+    display: grid; gap: 6px; margin-top: 8px; padding: 12px;
+    background: #fffbf0; border: 1.5px solid #ffe0a0; border-radius: 10px;
+  }
+  .edit-form input { width: 100%; min-width: 0; }
+  .edit-form .row  { display: flex; gap: 6px; }
+
+  /* ── Action cell ── */
+  .actions { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; color: var(--muted); padding: 24px 0; font-size: 14px; }
+
+  /* ── Stock pill ── */
+  .stock-ok  { color: var(--green-dk); font-weight: 700; }
+  .stock-low { color: var(--orange);   font-weight: 700; }
+  .stock-out { color: var(--red);      font-weight: 700; }
+
+  @media (max-width: 680px) {
+    header { padding: 14px 16px; }
+    .card  { padding: 14px 14px; }
+    th, td { padding: 8px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📚</div>
+  <div>
+    <h1>Online Bookstore</h1>
+    <p>Manage books, inventory &amp; customer orders</p>
+  </div>
+</header>
+
+<main>
+
+  {% with messages = get_flashed_messages() %}
+    {% for msg in messages %}
+      <div class="flash">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── Add Book ── -->
+  <div class="card">
+    <div class="card-title"><span class="icon">➕</span> Add a Book</div>
+    <form method="post" action="{{ url_for('add_book') }}">
+      <input name="title"  placeholder="Book title"  required>
+      <input name="author" placeholder="Author"       required>
+      <input name="price"  type="number" min="0" step="0.01" placeholder="Price (₹)" required style="max-width:130px">
+      <input name="stock"  type="number" min="0"              placeholder="Stock"      required style="max-width:100px">
+      <button type="submit" class="btn btn-green">Add Book</button>
+    </form>
+  </div>
+
+  <!-- ── Book Inventory ── -->
+  <div class="card">
+    <div class="card-title"><span class="icon">📦</span> Book Inventory</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Book</th><th>Price</th><th>Stock</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        {% for book in books %}
+          <tr>
+            <td>{{ book.id }}</td>
+            <td>
+              <div class="book-title">{{ book.title }}</div>
+              <div class="book-author">{{ book.author }}</div>
+            </td>
+            <td>₹{{ '%.2f'|format(book.price) }}</td>
+            <td>
+              {% if book.stock == 0 %}
+                <span class="stock-out">Out of stock</span>
+              {% elif book.stock <= 3 %}
+                <span class="stock-low">{{ book.stock }} left</span>
+              {% else %}
+                <span class="stock-ok">{{ book.stock }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="actions">
+                <details>
+                  <summary>Edit</summary>
+                  <form class="edit-form" method="post" action="{{ url_for('update_book', book_id=book.id) }}">
+                    <input name="title"  value="{{ book.title }}"  required placeholder="Title">
+                    <input name="author" value="{{ book.author }}" required placeholder="Author">
+                    <div class="row">
+                      <input name="price" type="number" min="0" step="0.01" value="{{ book.price }}" required placeholder="Price">
+                      <input name="stock" type="number" min="0"              value="{{ book.stock }}" required placeholder="Stock">
+                    </div>
+                    <button type="submit" class="btn btn-orange">Save Changes</button>
+                  </form>
+                </details>
+                <form method="post" action="{{ url_for('delete_book', book_id=book.id) }}"
+                      onsubmit="return confirm('Delete "{{ book.title }}"?')">
+                  <button type="submit" class="btn btn-red">🗑 Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty">No books yet. Add one above!</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Place Order ── -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🛒</span> Place Customer Order</div>
+    <form method="post" action="{{ url_for('add_order') }}">
+      <input name="customer" placeholder="Customer name" required>
+      <select name="book_id" required>
+        <option value="">— Select a book —</option>
+        {% for book in books %}
+          <option value="{{ book.id }}" {% if book.stock == 0 %}disabled{% endif %}>
+            {{ book.title }} (stock: {{ book.stock }})
+          </option>
+        {% endfor %}
+      </select>
+      <input name="quantity" type="number" min="1" value="1" required style="max-width:90px">
+      <button type="submit" class="btn btn-green">Place Order</button>
+    </form>
+  </div>
+
+  <!-- ── Customer Orders ── -->
+  <div class="card">
+    <div class="card-title"><span class="icon">📋</span> Customer Orders</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Order</th><th>Customer</th><th>Book</th><th>Qty</th><th>Status</th><th>Update Status</th></tr>
+        </thead>
+        <tbody>
+        {% for order in orders %}
+          <tr>
+            <td><strong>#{{ order.id }}</strong></td>
+            <td>{{ order.customer }}</td>
+            <td>{{ order.book_title }}</td>
+            <td>{{ order.quantity }}</td>
+            <td>
+              <span class="badge badge-{{ order.status | lower }}">{{ order.status }}</span>
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('update_order_status', order_id=order.id) }}"
+                    style="flex-wrap:nowrap; gap:6px;">
+                <select name="status">
+                  {% for s in ['Placed','Processing','Shipped','Completed','Cancelled'] %}
+                    <option {% if s == order.status %}selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-orange">Update</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">No orders yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+</body>
+</html>
