@@ -200,3 +200,23 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+
+    import os
+from flask import send_file, abort
+
+@app.route("/download-db")
+def download_db():
+    # Set this to the exact path your app uses
+    db_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "bookstore.db"
+    )
+
+    if not os.path.isfile(db_path):
+        abort(404, "Database file not found")
+
+    return send_file(
+        db_path,
+        as_attachment=True,
+        download_name="bookstore.db"
+    )
